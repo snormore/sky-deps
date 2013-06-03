@@ -17,26 +17,19 @@ ifeq ($(UNAME), Linux)
 SOSUFFIX=so
 endif
 
-.PHONY: install leveldb luajit
+.PHONY: install lmdb luajit
 
-install: clean leveldb luajit
+install: clean lmdb luajit
 
 clean:
-	${MAKE} clean -C leveldb-1.9.0
+	${MAKE} clean -C lmdb
 	${MAKE} -C LuaJIT-2.0.1 clean PREFIX=${PREFIX}
-
-leveldb:
-	${MAKE} clean -C leveldb-1.9.0
-	${MAKE} -C leveldb-1.9.0
-	install -m 755 -d ${DESTDIR}${INCLUDEDIR}/leveldb
-	install -m 755 leveldb-1.9.0/include/leveldb/* ${DESTDIR}${INCLUDEDIR}/leveldb
-	install -m 755 -d ${DESTDIR}${LIBDIR}
-	install -m 755 leveldb-1.9.0/libleveldb.a ${DESTDIR}${LIBDIR}
-	install -m 755 leveldb-1.9.0/libleveldb.${SOSUFFIX}.1.9 ${DESTDIR}${LIBDIR}
-	ln -sf ${DESTDIR}${LIBDIR}/libleveldb.${SOSUFFIX}.1.9 ${DESTDIR}${LIBDIR}/libleveldb.${SOSUFFIX}.1
-	ln -sf ${DESTDIR}${LIBDIR}/libleveldb.${SOSUFFIX}.1.9 ${DESTDIR}${LIBDIR}/libleveldb.${SOSUFFIX}
 
 luajit:
 	${MAKE} -C LuaJIT-2.0.1 PREFIX=${PREFIX}
 	${MAKE} -C LuaJIT-2.0.1 install PREFIX=${PREFIX}
+
+lmdb:
+	${MAKE} -C lmdb PREFIX=${PREFIX}
+	${MAKE} -C lmdb install PREFIX=${PREFIX}
 
