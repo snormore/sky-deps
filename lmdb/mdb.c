@@ -5091,6 +5091,7 @@ mdb_cursor_prev(MDB_cursor *mc, MDB_val *key, MDB_val *data, MDB_cursor_op op)
 	if (mc->mc_ki[mc->mc_top] == 0)  {
 		DPUTS("=====> move to prev sibling page");
 		if ((rc = mdb_cursor_sibling(mc, 0)) != MDB_SUCCESS) {
+			mc->mc_flags &= ~C_INITIALIZED;
 			return rc;
 		}
 		mp = mc->mc_pg[mc->mc_top];
