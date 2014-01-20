@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <assert.h>
 #include "midl.h"
 
 /** @defgroup internal	MDB Internals
@@ -58,7 +59,7 @@ unsigned mdb_midl_search( MDB_IDL ids, MDB_ID id )
 			return cursor;
 		}
 	}
-
+	
 	if( val > 0 ) {
 		++cursor;
 	}
@@ -88,7 +89,7 @@ int mdb_midl_insert( MDB_IDL ids, MDB_ID id )
 		/* no room */
 		--ids[0];
 		return -2;
-
+	
 	} else {
 		/* insert id */
 		for (i=ids[0]; i>x; i--)
@@ -149,7 +150,7 @@ int mdb_midl_need( MDB_IDL *idp, unsigned num )
 		num = (num + num/4 + (256 + 2)) & -256;
 		if (!(ids = realloc(ids-1, num * sizeof(MDB_ID))))
 			return ENOMEM;
-		*ids++ = num - 2;
+		*ids++ = num -= 2;
 		*idp = ids;
 	}
 	return 0;
@@ -202,7 +203,7 @@ int mdb_midl_append_range( MDB_IDL *idp, MDB_ID id, unsigned n )
 /* Quicksort + Insertion sort for small arrays */
 
 #define SMALL	8
-#define	MIDL_SWAP(a,b)	{ itmp=(a); (a)=(b); (b)=itmp; }
+#define	SWAP(a,b)	{ itmp=(a); (a)=(b); (b)=itmp; }
 
 void
 mdb_midl_sort( MDB_IDL ids )
@@ -230,15 +231,15 @@ mdb_midl_sort( MDB_IDL ids )
 			l = istack[jstack--];
 		} else {
 			k = (l + ir) >> 1;	/* Choose median of left, center, right */
-			MIDL_SWAP(ids[k], ids[l+1]);
+			SWAP(ids[k], ids[l+1]);
 			if (ids[l] < ids[ir]) {
-				MIDL_SWAP(ids[l], ids[ir]);
+				SWAP(ids[l], ids[ir]);
 			}
 			if (ids[l+1] < ids[ir]) {
-				MIDL_SWAP(ids[l+1], ids[ir]);
+				SWAP(ids[l+1], ids[ir]);
 			}
 			if (ids[l] < ids[l+1]) {
-				MIDL_SWAP(ids[l], ids[l+1]);
+				SWAP(ids[l], ids[l+1]);
 			}
 			i = l+1;
 			j = ir;
@@ -247,7 +248,7 @@ mdb_midl_sort( MDB_IDL ids )
 				do i++; while(ids[i] > a);
 				do j--; while(ids[j] < a);
 				if (j < i) break;
-				MIDL_SWAP(ids[i],ids[j]);
+				SWAP(ids[i],ids[j]);
 			}
 			ids[l+1] = ids[j];
 			ids[j] = a;
@@ -305,6 +306,7 @@ int mdb_mid2l_insert( MDB_ID2L ids, MDB_ID2 *id )
 	unsigned x, i;
 
 	x = mdb_mid2l_search( ids, id->mid );
+	assert( x > 0 );
 
 	if( x < 1 ) {
 		/* internal error */
