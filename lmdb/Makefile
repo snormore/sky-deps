@@ -3,24 +3,36 @@
 ########################################################################
 # Configuration. The compiler options must enable threaded compilation.
 #
-# Preprocessor macros (for CPPFLAGS) of interest...
-# Note that the defaults should already be correct for most
-# platforms; you should not need to change any of these.
-# Read their descriptions in mdb.c if you do:
+# Preprocessor macros (for CPPFLAGS) of interest:
 #
-# - MDB_USE_POSIX_SEM
-# - MDB_DSYNC
-# - MDB_FDATASYNC
+# To compile successfully if the default does not:
+# - MDB_USE_POSIX_SEM	(enabled by default on BSD, Apple)
+#	Define if shared mutexes are unsupported.  Note that Posix
+#	semaphores and shared mutexes have different behaviors and
+#	different problems, see the Caveats section in lmdb.h.
+#
+# For best performence or to compile successfully:
+# - MDB_DSYNC = "O_DSYNC" (default) or "O_SYNC" (less efficient)
+#	If O_DSYNC is undefined but exists in /usr/include,
+#	preferably set some compiler flag to get the definition.
+# - MDB_FDATASYNC = "fdatasync" or "fsync"
+#	Function for flushing the data of a file. Define this to
+#	"fsync" if fdatasync() is not supported. fdatasync is
+#	default except on BSD, Apple, Android which use fsync.
 # - MDB_USE_PWRITEV
+#	Define if the pwritev() function is supported.
 #
-# There may be other macros in mdb.c of interest. You should
-# read mdb.c before changing any of them.
+# Data format:
+# - MDB_MAXKEYSIZE
+#	Controls data packing and limits, see mdb.c.
+#
+# Debugging:
+# - MDB_DEBUG, MDB_PARANOID.
 #
 CC	= gcc
 W	= -W -Wall -Wno-unused-parameter -Wbad-function-cast
-THREADS = -pthread
 OPT = -O2 -g
-CFLAGS	= $(THREADS) $(OPT) $(W) $(XCFLAGS)
+CFLAGS	= -pthread $(OPT) $(W) $(XCFLAGS)
 LDLIBS	=
 SOLIBS	=
 prefix	= /usr/local
@@ -35,10 +47,10 @@ PROGS	= $(IPROGS) mtest mtest2 mtest3 mtest4 mtest5
 all:	$(ILIBS) $(PROGS)
 
 install: $(ILIBS) $(IPROGS) $(IHDRS)
-	for f in $(IPROGS); do cp $$f $(DESTDIR)$(prefix)/bin; done
-	for f in $(ILIBS); do cp $$f $(DESTDIR)$(prefix)/lib; done
-	for f in $(IHDRS); do cp $$f $(DESTDIR)$(prefix)/include; done
-	for f in $(IDOCS); do cp $$f $(DESTDIR)$(prefix)/man/man1; done
+	cp $(IPROGS) $(DESTDIR)$(prefix)/bin
+	cp $(ILIBS) $(DESTDIR)$(prefix)/lib
+	cp $(IHDRS) $(DESTDIR)$(prefix)/include
+	cp $(IDOCS) $(DESTDIR)$(prefix)/man/man1
 
 clean:
 	rm -rf $(PROGS) *.[ao] *.so *~ testdb
@@ -51,7 +63,6 @@ liblmdb.a:	mdb.o midl.o
 	ar rs $@ mdb.o midl.o
 
 liblmdb.so:	mdb.o midl.o
-#	$(CC) $(LDFLAGS) -pthread -shared -Wl,-Bsymbolic -o $@ mdb.o midl.o $(SOLIBS)
 	$(CC) $(LDFLAGS) -pthread -shared -o $@ mdb.o midl.o $(SOLIBS)
 
 mdb_stat: mdb_stat.o liblmdb.a
