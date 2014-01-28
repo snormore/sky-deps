@@ -20,7 +20,6 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <sys/types.h>
-#include <assert.h>
 #include "midl.h"
 
 /** @defgroup internal	MDB Internals
@@ -31,8 +30,7 @@
  */
 #define CMP(x,y)	 ( (x) < (y) ? -1 : (x) > (y) )
 
-#if 0	/* superseded by append/sort */
-static unsigned mdb_midl_search( MDB_IDL ids, MDB_ID id )
+unsigned mdb_midl_search( MDB_IDL ids, MDB_ID id )
 {
 	/*
 	 * binary search of id in ids
@@ -60,13 +58,14 @@ static unsigned mdb_midl_search( MDB_IDL ids, MDB_ID id )
 			return cursor;
 		}
 	}
-	
+
 	if( val > 0 ) {
 		++cursor;
 	}
 	return cursor;
 }
 
+#if 0	/* superseded by append/sort */
 int mdb_midl_insert( MDB_IDL ids, MDB_ID id )
 {
 	unsigned x, i;
@@ -89,7 +88,7 @@ int mdb_midl_insert( MDB_IDL ids, MDB_ID id )
 		/* no room */
 		--ids[0];
 		return -2;
-	
+
 	} else {
 		/* insert id */
 		for (i=ids[0]; i>x; i--)
@@ -104,8 +103,10 @@ int mdb_midl_insert( MDB_IDL ids, MDB_ID id )
 MDB_IDL mdb_midl_alloc(int num)
 {
 	MDB_IDL ids = malloc((num+2) * sizeof(MDB_ID));
-	if (ids)
+	if (ids) {
 		*ids++ = num;
+		*ids = 0;
+	}
 	return ids;
 }
 
@@ -118,8 +119,9 @@ void mdb_midl_free(MDB_IDL ids)
 int mdb_midl_shrink( MDB_IDL *idp )
 {
 	MDB_IDL ids = *idp;
-	if (*(--ids) > MDB_IDL_UM_MAX) {
-		ids = realloc(ids, (MDB_IDL_UM_MAX+1) * sizeof(MDB_ID));
+	if (*(--ids) > MDB_IDL_UM_MAX &&
+		(ids = realloc(ids, (MDB_IDL_UM_MAX+1) * sizeof(MDB_ID))))
+	{
 		*ids++ = MDB_IDL_UM_MAX;
 		*idp = ids;
 		return 1;
@@ -127,7 +129,7 @@ int mdb_midl_shrink( MDB_IDL *idp )
 	return 0;
 }
 
-int mdb_midl_grow( MDB_IDL *idp, int num )
+static int mdb_midl_grow( MDB_IDL *idp, int num )
 {
 	MDB_IDL idn = *idp-1;
 	/* grow it */
@@ -136,6 +138,20 @@ int mdb_midl_grow( MDB_IDL *idp, int num )
 		return ENOMEM;
 	*idn++ += num;
 	*idp = idn;
+	return 0;
+}
+
+int mdb_midl_need( MDB_IDL *idp, unsigned num )
+{
+	MDB_IDL ids = *idp;
+	num += ids[0];
+	if (num > ids[-1]) {
+		num = (num + num/4 + (256 + 2)) & -256;
+		if (!(ids = realloc(ids-1, num * sizeof(MDB_ID))))
+			return ENOMEM;
+		*ids++ = num - 2;
+		*idp = ids;
+	}
 	return 0;
 }
 
@@ -167,10 +183,26 @@ int mdb_midl_append_list( MDB_IDL *idp, MDB_IDL app )
 	return 0;
 }
 
+int mdb_midl_append_range( MDB_IDL *idp, MDB_ID id, unsigned n )
+{
+	MDB_ID *ids = *idp, len = ids[0];
+	/* Too big? */
+	if (len + n > ids[-1]) {
+		if (mdb_midl_grow(idp, n | MDB_IDL_UM_MAX))
+			return ENOMEM;
+		ids = *idp;
+	}
+	ids[0] = len + n;
+	ids += len;
+	while (n)
+		ids[n--] = id++;
+	return 0;
+}
+
 /* Quicksort + Insertion sort for small arrays */
 
 #define SMALL	8
-#define	SWAP(a,b)	{ itmp=(a); (a)=(b); (b)=itmp; }
+#define	MIDL_SWAP(a,b)	{ itmp=(a); (a)=(b); (b)=itmp; }
 
 void
 mdb_midl_sort( MDB_IDL ids )
@@ -198,15 +230,15 @@ mdb_midl_sort( MDB_IDL ids )
 			l = istack[jstack--];
 		} else {
 			k = (l + ir) >> 1;	/* Choose median of left, center, right */
-			SWAP(ids[k], ids[l+1]);
+			MIDL_SWAP(ids[k], ids[l+1]);
 			if (ids[l] < ids[ir]) {
-				SWAP(ids[l], ids[ir]);
+				MIDL_SWAP(ids[l], ids[ir]);
 			}
 			if (ids[l+1] < ids[ir]) {
-				SWAP(ids[l+1], ids[ir]);
+				MIDL_SWAP(ids[l+1], ids[ir]);
 			}
 			if (ids[l] < ids[l+1]) {
-				SWAP(ids[l], ids[l+1]);
+				MIDL_SWAP(ids[l], ids[l+1]);
 			}
 			i = l+1;
 			j = ir;
@@ -215,7 +247,7 @@ mdb_midl_sort( MDB_IDL ids )
 				do i++; while(ids[i] > a);
 				do j--; while(ids[j] < a);
 				if (j < i) break;
-				SWAP(ids[i],ids[j]);
+				MIDL_SWAP(ids[i],ids[j]);
 			}
 			ids[l+1] = ids[j];
 			ids[j] = a;
@@ -273,7 +305,6 @@ int mdb_mid2l_insert( MDB_ID2L ids, MDB_ID2 *id )
 	unsigned x, i;
 
 	x = mdb_mid2l_search( ids, id->mid );
-	assert( x > 0 );
 
 	if( x < 1 ) {
 		/* internal error */
