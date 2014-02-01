@@ -3,9 +3,9 @@
 ################################################################################
 
 PREFIX=/usr/local
-DESTDIR=
+[ -z "$DESTDIR" ] && DESTDIR=""
 BINDIR=${PREFIX}/bin
-DATADIR=/var/lib/sky
+[ -z "$DATADIR" ] && DATADIR="/var/lib/sky"
 INCLUDEDIR=${PREFIX}/include
 LIBDIR=${PREFIX}/lib
 
@@ -19,17 +19,23 @@ endif
 
 .PHONY: install lmdb luajit
 
-install: clean lmdb luajit
+install: clean setup lmdb luajit
+
+setup:
+	mkdir -p ${DESTDIR}${PREFIX}/bin
+	mkdir -p ${DESTDIR}${PREFIX}/lib
+	mkdir -p ${DESTDIR}${PREFIX}/include
+	mkdir -p ${DESTDIR}${PREFIX}/man
 
 clean:
 	${MAKE} clean -C lmdb
 	${MAKE} -C LuaJIT-2.0.1 clean PREFIX=${PREFIX}
 
 luajit:
-	${MAKE} -C LuaJIT-2.0.1 PREFIX=${PREFIX}
-	${MAKE} -C LuaJIT-2.0.1 install PREFIX=${PREFIX}
+	${MAKE} -C LuaJIT-2.0.1 PREFIX=${PREFIX} DESTDIR=${DESTDIR}
+	${MAKE} -C LuaJIT-2.0.1 install PREFIX=${PREFIX} DESTDIR=${DESTDIR}
 
 lmdb:
-	${MAKE} -C lmdb PREFIX=${PREFIX}
-	${MAKE} -C lmdb install PREFIX=${PREFIX}
+	${MAKE} -C lmdb PREFIX=${PREFIX} DESTDIR=${DESTDIR}
+	${MAKE} -C lmdb install PREFIX=${PREFIX} DESTDIR=${DESTDIR}
 
