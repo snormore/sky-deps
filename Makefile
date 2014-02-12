@@ -25,7 +25,7 @@ setup:
 	mkdir -p ${DESTDIR}${PREFIX}/bin
 	mkdir -p ${DESTDIR}${PREFIX}/lib
 	mkdir -p ${DESTDIR}${PREFIX}/include
-	mkdir -p ${DESTDIR}${PREFIX}/man
+	mkdir -p ${DESTDIR}${PREFIX}/man/man1
 
 clean:
 	${MAKE} clean -C lmdb
