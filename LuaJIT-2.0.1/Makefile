@@ -66,7 +66,7 @@ UNINSTALL_DIRS= $(INSTALL_JITLIB) $(INSTALL_LJLIBD) $(INSTALL_INC) \
   $(INSTALL_LMOD) $(INSTALL_LMODD) $(INSTALL_CMOD) $(INSTALL_CMODD)
 
 RM= rm -f
-MKDIR= mkdir -p
+MKDIR= mkdir -p -v
 RMDIR= rmdir 2>/dev/null
 SYMLINK= ln -sf
 INSTALL_X= install -m 0755
